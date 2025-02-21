@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Maze Game</title>
+    <style>
+        body { text-align: center; background: #eee; }
+        canvas { border: 1px solid black; background: white; display: block; margin: 10px auto; }
+        .controls { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+        .row { display: flex; }
+        button { font-size: 20px; margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>QR Maze Game</h2>
+    <canvas id="mazeCanvas" width="516" height="516"></canvas>
+    <div class="controls">
+        <button onclick="move(0, -1)">⬆️</button>
+        <div class="row">
+            <button onclick="move(-1, 0)">⬅️</button>
+            <button onclick="move(1, 0)">➡️</button>
+        </div>
+        <button onclick="move(0, 1)">⬇️</button>
+        <button id="restartButton" onclick="restartGame()" style="display:none;">Restart Game</button>
+    </div>
+    <script>
+        const canvas = document.getElementById("mazeCanvas");
+        const ctx = canvas.getContext("2d");
+        const restartButton = document.getElementById("restartButton");
+
+        const size = 37;
+        const cellSize = canvas.width / size;
+        let player, exit, maze;
+
+        function generateMaze() {
+            maze = Array.from({ length: size }, () => Array(size).fill(1));
+            function carve(x, y) {
+                let directions = [[0, -2], [0, 2], [-2, 0], [2, 0]];
+                directions.sort(() => Math.random() - 0.5);
+                
+                for (let [dx, dy] of directions) {
+                    let nx = x + dx, ny = y + dy;
+                    if (nx > 0 && ny > 0 && nx < size - 1 && ny < size - 1 && maze[ny][nx] === 1) {
+                        maze[ny][nx] = 0;
+                        maze[y + dy / 2][x + dx / 2] = 0;
+                        carve(nx, ny);
+                    }
+                }
+            }
+            maze[1][1] = 0;
+            carve(1, 1);
+            maze[size - 2][size - 2] = 0;
+            player = { x: 1, y: 1 };
+            exit = { x: size - 2, y: size - 2 };
+        }
+
+        function drawMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    ctx.fillStyle = maze[y][x] === 1 ? "black" : "white";
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                }
+            }
+            ctx.fillStyle = "green";
+            ctx.fillRect(exit.x * cellSize, exit.y * cellSize, cellSize, cellSize);
+            ctx.fillStyle = "red";
+            ctx.fillRect(player.x * cellSize, player.y * cellSize, cellSize, cellSize);
+        }
+
+        function move(dx, dy) {
+            let newX = player.x + dx;
+            let newY = player.y + dy;
+            if (maze[newY][newX] === 0) {
+                player.x = newX;
+                player.y = newY;
+                drawMaze();
+                if (player.x === exit.x && player.y === exit.y) {
+                    setTimeout(() => {
+                        alert("You Win!");
+                        restartButton.style.display = "block";
+                    }, 100);
+                }
+            }
+        }
+
+        function restartGame() {
+            restartButton.style.display = "none";
+            generateMaze();
+            drawMaze();
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") move(0, -1);
+            if (e.key === "ArrowDown") move(0, 1);
+            if (e.key === "ArrowLeft") move(-1, 0);
+            if (e.key === "ArrowRight") move(1, 0);
+        });
+
+        canvas.addEventListener("touchstart", (e) => {
+            let touch = e.touches[0];
+            let rect = canvas.getBoundingClientRect();
+            let touchX = Math.floor((touch.clientX - rect.left) / cellSize);
+            let touchY = Math.floor((touch.clientY - rect.top) / cellSize);
+            if (Math.abs(touchX - player.x) + Math.abs(touchY - player.y) === 1) {
+                move(touchX - player.x, touchY - player.y);
+            }
+        });
+
+        generateMaze();
+        drawMaze();
+    </script>
+</body>
+</html>
